@@ -1,24 +1,71 @@
 const express = require("express");
 const bodyParser = require("body-parser");
-const date = require(__dirname+"/date.js")
-const app = express();
+const mongoose = require("mongoose");
+const date = require(__dirname+"/date.js");
 
-const items = [];        //just for making working of todo list and not messing up things we make an array
-const workItems= [];    //yes we can make array const in js and push init const doent protect things inside it you just cant assign it to new array or object
+const app = express();
 
 app.set('view engine', 'ejs');                           //this is for ejs check documentation
 app.use(bodyParser.urlencoded({extended: true}));
 app.use(express.static("public"));
 
 
+//if we are using any databse then we dont add items into array we are using mongodbin this project with the help of mongoose
+//const items = [];        //just for making working of todo list and not messing up things we make an array
+//const workItems= [];    //yes we can make array const in js and push init const doent protect things inside it you just cant assign it to new array or object
+
+mongoose.connect('mongodb://localhost:27017/todolistDB', {useNewUrlParser: true, useUnifiedTopology: true});
+// sChema
+
+  const { Schema } = mongoose;
+const itemsSchema = new Schema({
+  name: String
+});
+// model based on schema
+const Item = mongoose.model("Item",itemsSchema);
+// basic items for user experience
+const item1 =new Item({
+  name:"welcome to your todo list."
+});
+const item2 =new Item({
+  name:"Hit the + button to add a new item."
+});
+const item3 =new Item({
+  name:"<- hit this to delete an item."
+});
+
+const defaultItems=[item1,item2,item3];
+
+
+
+
+
+
+
 app.get("/", function(req, res) {
-
-
   let day = date.getDate();
+// mongoose find all
+  Item.find({},function(err,founditems){
 
-  res.render("list", {  title: day,newListItems:items});//weare writing newListItem here for a reason and havent writted it in app.post where it belongs
-                                                          //and have writted res.redirect instead of rendering
+    if (founditems.lenght !=0)
+    {
+      // inserting data in our mongodb
+         Item.insertMany(defaultItems, function(err){
+           if(err){
+             console.log(err);
+           }else{
+            console.log("Successfully saved  default items to db.");
+           }
+         });
+      res.redirect("/");
+    }else{
+      console.log(founditems);
+    res.render("list", {  title: day,newListItems:founditems});
+     }
+     });
 
+//weare writing newListItem here for a reason and havent writted it in app.post where it belongs
+ //and have writted res.redirect instead of rendering
 });
 //res.render check the folders views and search for file lists having .ejs extension and then finds the ejs inspect
 // in which we want to make changes and change it with thing after : i.e day
@@ -29,7 +76,7 @@ app.post("/",function(req,res){
 let item = req.body.newItem;
 
   if(req.body.list === "Work"){
-    workItems.push(item);
+  workItems.push(item);
     res.redirect("/work");
   }else{
    items.push(item);
